@@ -12,40 +12,101 @@ test_4_locations = [ ('random_id_0', 40, 10, 100), ('random_id_1', 20, 10, 100) 
 test_1_trucks_1 = [ 10 ] #Should fit
 test_1_trucks_2 = [ 10, 10 ] #Should fit
 
+test_2_trucks_1 = [ 10, 10 ]
+
 test_3_trucks_1 = [10, 10] #Should fit
 test_4_trucks_1 = [10, 30, 20] #Should fit
 
-def can_fit( trucks, location_combo ):
-    #locations should be list of lengths
-    #Split up widths into multiple lengths
-    algo_locations = []
-    for location in location_combo:
-        for i in range( location[2]//10 ): #Make slots for widths
-            algo_locations.append( location[1] ) 
-        
 
-    def backtrack(truck_idx, locations):
-        # Base case: all trucks placed
-        if truck_idx == len(trucks):
-            return True
+def can_fit_greedy(trucks, location_combo):
+    # Generate all slots from location combo
+    slots = []
+    for _, length, width, _ in location_combo:
+        slots.extend([length] * (width // 10))
 
-        for loc_idx in range(len(locations)):
-            if trucks[truck_idx] <= locations[loc_idx]:
-                # Place truck
-                new_locations = locations[:]
-                new_locations[loc_idx] -= trucks[truck_idx]
+    slots.sort(reverse=True)
+    trucks_sorted = sorted(trucks, reverse=True)
 
-                if backtrack(truck_idx + 1, new_locations):
-                    return True
+    for truck in trucks_sorted:
+        placed = False
+        for i in range(len(slots)):
+            if truck <= slots[i]:
+                slots[i] -= truck
+                placed = True
+                break
+        if not placed:
+            return False
+    return True
 
-        return False
 
-    return backtrack(0, algo_locations)
+def can_fit_dp(trucks, location_combo):
+    # Expand slots
+    slots = []
+    for _, length, width, _ in location_combo:
+        slots.extend([length] * (width // 10))
 
-print ( can_fit( test_4_trucks_1, test_4_locations) ) 
-print ( can_fit( test_3_trucks_1, test_3_locations) ) 
+    n = len(trucks)
+    full_mask = (1 << n) - 1
+    dp = [False] * (1 << n)
+    dp[0] = True  # no trucks placed is always valid
+
+    for mask in range(1 << n):
+        if not dp[mask]:
+            continue
+        # Try to assign next slot
+        for slot in slots:
+            # Subset-sum: find subset of unused trucks that fit
+            remaining = [trucks[i] for i in range(n) if not (mask & (1 << i))]
+            m = len(remaining)
+            # Try all subsets of remaining trucks (brute force here, but could use knapsack DP)
+            for sub in range(1 << m):
+                total = sum(remaining[j] for j in range(m) if sub & (1 << j))
+                if total <= slot:
+                    new_mask = mask
+                    for j in range(m):
+                        if sub & (1 << j):
+                            truck_idx = [i for i in range(n) if not (mask & (1 << i))][j]
+                            new_mask |= 1 << truck_idx
+                    dp[new_mask] = True
+
+    return dp[full_mask]
+
+
+def best_listing_combo(locations, trucks):
+    """
+    Finds cheapest combo of listings that can fit all trucks.
+    Implements early pruning: if a combo works, skip supersets.
+    """
+    # Sort locations by price ascending for early pruning
+    locations_sorted = sorted(locations, key=lambda x: x[3])
+
+    n = len(locations_sorted)
+    best_combo = None
+    best_price = float('inf')
+
+    # Generate combinations incrementally by size
+    for r in range(1, n + 1):
+        for combo in combinations(locations_sorted, r):
+            # Early pruning by total price
+            total_price = sum(l[3] for l in combo)
+            if total_price >= best_price:
+                continue  # Can't beat current best
+
+            if can_fit_dp(trucks, combo):
+                best_combo = combo
+                best_price = total_price
+                # Important: prune supersets, so break here
+                break
+        # If we found a valid combo of size r, no need to check larger combos
+        if best_combo:
+            break
+
+    return best_combo
 
 # def best_listing_combo( locations, trucks ):
+#     # print(locations)
+#     # total_truck_length = sum(trucks)
+
 #     total_locations_combo = []
 #     best_location  = None
 #     best_price = float( 'inf' )
@@ -53,26 +114,15 @@ print ( can_fit( test_3_trucks_1, test_3_locations) )
 #     for i in range(1, len(locations) + 1 ): 
 #         total_locations_combo.extend( combinations(locations, i) )
 
-#     for location_combo in total_locations_combo: 
-#         if can_fit( trucks, location_combo ): 
+#     #locations: id, length, width, price
+#     for location_combo in total_locations_combo:
+#         # total_slot_length = sum(length * (width // 10) for _, length, width, _ in location_combo) 
+#         # if total_slot_length < total_truck_length:
+#         #     continue
 
-         
-
-# best_listing_combo(test_2)
-
-
-
-    #Greedily fit the trucks because we will already generate all possible combinations anyways
-    #Try to fit trucks from locations with biggest length to smallest
-    # sorted_locations = sorted(location_combo, key=lambda x : x[1] )
-    # sorted_trucks = trucks.sort()
-    # trucks_filled = set()
-
-
-    # for location in sorted_locations: 
-    #     #Also, try to fit multiple trucks per location
-    #     for truck in trucks: 
-    #         if truck not in trucks_filled: 
-
-
-    #Informal exchange argument for the algorithm is that it doesn't matter
+#         location_combo_price = sum( location[3] for location in location_combo)
+#         if can_fit_dp( trucks, location_combo ) and location_combo_price < best_price: #If tie, keep current combo    
+#             best_location = location_combo
+#             best_price = location_combo_price
+    
+#     return best_location
