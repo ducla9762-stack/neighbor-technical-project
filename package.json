@@ -1,0 +1,9 @@
+{
+  "name": "cpp-vercel-api",
+  "version": "1.0.0",
+  "main": "api/index.js",
+  "type": "module",
+  "dependencies": {
+    "json": "^11.0.0"  
+  }
+}

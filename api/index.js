@@ -7,8 +7,10 @@ export default async function handler(req, res) {
   }
 
   const input = JSON.stringify(req.body);
+  
+//   const cppProcess = spawn('./bin_packing', [], { stdio: ['pipe', 'pipe', 'inherit'] });
 
-  const cppProcess = spawn('./bin_packing', [], { stdio: ['pipe', 'pipe', 'inherit'] });
+  const cppProcess = spawn(`./bin_packing`, [], { stdio: ['pipe', 'pipe', 'pipe'] });
   let output = '';
 
   cppProcess.stdout.on('data', (data) => {
