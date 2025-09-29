@@ -55,7 +55,7 @@ vector<Listing> best_listing_combo(vector<Listing>& locations, const vector<int>
         vector<int> idx(r);
         iota(idx.begin(), idx.end(), 0);
 
-        while (true) {
+        while (true) {  
             vector<Listing> combo;
             for (int i : idx) combo.push_back(locations[i]);
 
